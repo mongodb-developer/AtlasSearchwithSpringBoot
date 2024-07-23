@@ -6,7 +6,6 @@ import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.SearchIndexModel;
 import org.bson.Document;
-import org.bson.conversions.Bson;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
@@ -60,16 +59,16 @@ public class AtlasSearchApplication {
 								new Document("dynamic", false).append("fields",
 										new Document().append("fullplot",
 														Arrays.asList(
-																new Document().append("type", "stringFacet"),
-																new Document().append("type", "string"),
 																new Document().append("type", "autocomplete")
-																		.append("tokenization", "nGram")
-																		.append("minGrams", 3)
-																		.append("maxGrams", 7)
+																		.append("tokenization", "edgeGram")
+																		.append("minGrams", 2)
+																		.append("maxGrams", 15)
 																		.append("foldDiacritics", false)
 														))
-												.append("title", new Document().append("type", "string")))
-						));
+												.append("title",
+														Arrays.asList(
+																new Document().append("type", "string")
+														)))));
 
 				SearchIndexModel indexFlour = new SearchIndexModel("testIndex04",
 						new Document("mappings", new Document()
@@ -84,18 +83,11 @@ public class AtlasSearchApplication {
 										.append("source", new Document()
 												.append("collection", "test_synonyms")))));
 
-				// Create indexes
 				collection.createSearchIndexes(List.of(indexOne, indexTwo, indexThree, indexFlour));
 
-				// Wait for 4 minutes to wait for indexes to be created.
 				Thread.sleep(4 * 60 * 1000);
 
-				// List and delete indexes
-				collection.dropSearchIndex("testIndex01");
-				collection.dropSearchIndex("testIndex02");
-				collection.dropSearchIndex("testIndex03");
-				collection.dropSearchIndex("testIndex04");
-				System.out.println("Deleted all indexes created");
+
 
 			} catch (InterruptedException e) {
 				Thread.currentThread().interrupt();
