@@ -128,14 +128,26 @@ List<Document> pipeline = Arrays.asList(new Document("$search",
                                         new Document("$meta", "searchScore"))));
         return collection.aggregate(result).into(new ArrayList<>());
     }
+
+    //deleting all the indexes that were created.
     public void deleteSearchIndexes(String dbName, String collectionName) {
         MongoDatabase database = mongoClient.getDatabase(dbName);
         MongoCollection<Document> collection = database.getCollection(collectionName);
-            collection.dropSearchIndex("testIndex01");
-            collection.dropSearchIndex("testIndex02");
-			collection.dropSearchIndex("testIndex03");
-			collection.dropSearchIndex("testIndex04");
-			System.out.println("Deleted all indexes created");
+
+        List<String> indexNames = new ArrayList<>();
+        for (Document indexInfo : collection.listSearchIndexes()) {
+            String indexName = indexInfo.getString("name");
+            // Ignore the default index on _id
+            if (!"_id_".equals(indexName)) {
+                indexNames.add(indexName);
+            }
         }
 
+        // Drop each index using its name from the array
+        for (String indexName : indexNames) {
+            collection.dropSearchIndex(indexName);
+        }
+        System.out.println("Deleted all indexes created");
+
+    }
 }
