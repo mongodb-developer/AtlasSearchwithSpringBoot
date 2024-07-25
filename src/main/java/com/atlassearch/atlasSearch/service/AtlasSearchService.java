@@ -25,19 +25,17 @@ public class AtlasSearchService {
 
     //The testIndex01 sets dynamic mapping set to true and that makes the fields with specific data types automatically indexed.
     public ArrayList<Document> searchMovies(String query) {
-        List<Document> pipeline = Arrays.asList(
-                new Document("$search",
+        List<Document> pipeline = Arrays.asList(new Document("$search",
                         new Document("index", "testIndex01")
                                 .append("text",
-                                        new Document("query", query)
-                                                .append("path",
-                                                        new Document("wildcard", "*")))),
+                                        new Document("query", "cartoon")
+                                                .append("path", Arrays.asList("title", "plot", "fullplot")))),
                 new Document("$project",
                         new Document("_id", 0L)
-                                .append("plot", 1L)
                                 .append("title", 1L)
-                                .append("fullplot", 1L)
-        ));
+                                .append("plot", 1L)
+                                .append("fullplot", 1L)),
+                new Document("$limit", 3L));
 
         ArrayList<Document> results = new ArrayList<>();
         collection.aggregate(pipeline).into(results);
@@ -46,7 +44,7 @@ public class AtlasSearchService {
 
     //Using testIndex02 to test the field mapping
     public ArrayList<Document> searchMoviesWithGenre(String keyword){
-List<Document> pipeline = Arrays.asList(new Document("$search",
+        List<Document> pipeline = Arrays.asList(new Document("$search",
                 new Document("index", "testIndex02")
                         .append("text",
                                 new Document("query", keyword)
@@ -54,26 +52,30 @@ List<Document> pipeline = Arrays.asList(new Document("$search",
         new Document("$project",
                 new Document("_id", 0L)
                         .append("title", 1L)
-                        .append("genre", 1L)));
+                        .append("genres", 1L)),
+                new Document("$limit", 5L));
         ArrayList<Document> results = new ArrayList<>();
         collection.aggregate(pipeline).into(results);
         return results;
     }
 
     //using testIndex02 to categorise data received from searchMoviesWithGenre function
-    public ArrayList<Document> searchMoviesandCategorise(String keyword){
-        List<Document> pipeline = List.of(new Document("$search",
+    public ArrayList<Document> searchMoviesAndCategorise(){
+        List<Document> pipeline = Arrays.asList(new Document("$searchMeta",
                 new Document("index", "testIndex02")
                         .append("facet",
                                 new Document("operator",
-                                        new Document("compound",
-                                                new Document("must", List.of(new Document("text",
-                                                        new Document("query", keyword)
-                                                                .append("path", Arrays.asList("title", "plot")))))))
+                                        new Document("text",
+                                                new Document("query", "movie")
+                                                        .append("path", "title")))
                                         .append("facets",
                                                 new Document("genresFacet",
                                                         new Document("type", "string")
-                                                                .append("path", "genres"))))));
+                                                                .append("path", "genres"))
+                                                        .append("yearFacet",
+                                                                new Document("type", "number")
+                                                                        .append("path", "year")
+                                                                        .append("boundaries", Arrays.asList(1990L, 2000L, 2010L, 2020L)))))));
         ArrayList<Document> results = new ArrayList<>();
         collection.aggregate(pipeline).into(results);
         return results;
@@ -85,11 +87,16 @@ List<Document> pipeline = Arrays.asList(new Document("$search",
                       new Document("index", "testIndex03")
                               .append("autocomplete",
                                       new Document("query", keyword)
-                                              .append("path", "fullplot"))),
+                                              .append("path", "fullplot"))
+                              .append("highlight",
+                                      new Document("path", "fullplot"))),
               new Document("$project",
-                      new Document("title", 1L)
-                              .append("plot", 1L)
-                              .append("fullplot", 1L)));
+                      new Document("_id", 0L)
+                              .append("fullplot", 1L)
+                              .append("highlights",
+                                      new Document("$meta", "searchHighlights"))),
+              new Document("$limit", 1L));
+
         ArrayList<Document> results = new ArrayList<>();
         collection.aggregate(pipeline).into(results);
         return results;
@@ -107,7 +114,8 @@ List<Document> pipeline = Arrays.asList(new Document("$search",
                                                                 .append("maxExpansions", 100L)))),
                 new Document("$project",
                         new Document("title", 1L)
-                                .append("cast", 1L)));
+                                .append("cast", 1L)),
+                new Document("$limit", 3L));
         return collection.aggregate(result).into(new ArrayList<>());
     }
 
@@ -125,7 +133,8 @@ List<Document> pipeline = Arrays.asList(new Document("$search",
                                 .append("title", 1L)
                                 .append("fullplot", 1L)
                                 .append("score",
-                                        new Document("$meta", "searchScore"))));
+                                        new Document("$meta", "searchScore"))),
+                new Document("$limit", 3L));
         return collection.aggregate(result).into(new ArrayList<>());
     }
 
@@ -137,17 +146,14 @@ List<Document> pipeline = Arrays.asList(new Document("$search",
         List<String> indexNames = new ArrayList<>();
         for (Document indexInfo : collection.listSearchIndexes()) {
             String indexName = indexInfo.getString("name");
-            // Ignore the default index on _id
             if (!"_id_".equals(indexName)) {
                 indexNames.add(indexName);
             }
         }
-
         // Drop each index using its name from the array
         for (String indexName : indexNames) {
             collection.dropSearchIndex(indexName);
         }
         System.out.println("Deleted all indexes created");
-
     }
 }

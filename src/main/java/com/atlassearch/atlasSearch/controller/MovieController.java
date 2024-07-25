@@ -26,9 +26,9 @@ public class MovieController {
         return movieService.searchMoviesWithGenre(query);
     }
 
-    @GetMapping("/searchMovies")
-    public ArrayList<Document> searchMoviesandCategorise(@RequestParam String query) {
-        return movieService.searchMoviesandCategorise(query);
+    @GetMapping("/searchMoviesAndCategorise")
+    public ArrayList<Document> searchMoviesAndCategorise() {
+        return movieService.searchMoviesAndCategorise();
     }
     @GetMapping("/searchMoviesWithAutocomplete")
     public ArrayList<Document> searchWithIncompleteKeyword(@RequestParam String query) {
